@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">SuperTicTacToe</string>
+    <string name="empty">☐</string>
+    <string name="player0">X</string>
+    <string name="player1">O</string>
+    <string name="aiOff">ai off</string>
+    <string name="aiOn">ai on</string>
+
+
+</resources>

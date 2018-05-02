@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">#3f51b5</color>
+    <color name="colorPrimaryDark">#303F9F</color>
+    <color name="colorAccent">#FF4081</color>
+    <color name="Player0">#ff7700</color>
+    <color name="Player1">#004cff</color>
+    <color name="DarkBackground">#193111</color>
+    <color name="Highlight">#386319</color>
+    <color name="Transparent">#00ffffff</color>
+    <color name="Draw">#292929</color>
+
+</resources>
