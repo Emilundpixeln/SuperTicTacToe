@@ -35,10 +35,12 @@ public class AI
         }
         else
         {
+            System.out.println("ran ai as -1");
             int min = Integer.MAX_VALUE;
             for (Map.Entry<Pos, State> e: state.moves.entrySet())
             {
                 int eval = minimax(e.getValue(), depth, (byte)1);
+                System.out.println(e.getKey().x + ", " + e.getKey().y + " got " + eval);
                 if(eval < min)
                 {
                     min = eval;

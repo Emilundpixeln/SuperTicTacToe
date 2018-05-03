@@ -12,6 +12,14 @@ import java.util.Map;
 // game state (for ai)
 class State
 {
+    State(State s)
+    {
+        // creates state from prevstate
+        for (int i = 0; i < 9; i++)
+            System.arraycopy(s.state[i], 0, state[i], 0, 9);
+
+        nextMove = s.nextMove;
+    }
     State(State s, Pos p, byte l, byte _nextMove)
     {
         // creates state from prevstate where it overwrites Pos p with l
@@ -31,9 +39,10 @@ class State
     byte[][] state = new byte[9][9];
     Map<Pos, State> moves;
 
-    byte[] over;
-    byte[] wins = new byte[2];
-    byte draws = 0;
+    private byte[] over;
+    private byte[] wins = new byte[2];
+    private byte[] nearwins = new byte[2];
+    private byte draws = 0;
     byte nextMove = -1; // index of grid that has to be played. -1 if any is okay
 
     private void checkIfOver()
@@ -56,47 +65,73 @@ class State
                 // ver
                 for (int x = 0; x < 3; x++) {
                     boolean is = true;
+                    boolean leftOneOut = false;
                     for (int y = 0; y < 3; y++) {
+
                         if (Istate[y][x] != player)
-                            is = false;
+                        {
+                            if(!leftOneOut && Istate[y][x] == 0)
+                                leftOneOut = true;
+                            else
+                                is = false;
+                        }
+
                     }
                     if (is) {
-                        over[i] = player;
-                        return;
+                        over[i] = (byte)(player * (leftOneOut ? 2 : 1));
+                        break;
                     }
                 }
 
                 // hor
                 for (int y = 0; y < 3; y++) {
                     boolean is = true;
+                    boolean leftOneOut = false;
                     for (int x = 0; x < 3; x++) {
                         if (Istate[y][x] != player)
-                            is = false;
+                        {
+                            if(!leftOneOut && Istate[y][x] == 0)
+                                leftOneOut = true;
+                            else
+                                is = false;
+                        }
                     }
                     if (is) {
-                        over[i] = player;
-                        return;
+                        over[i] = (byte)(player * (leftOneOut ? 2 : 1));
+                        break;
                     }
                 }
 
                 //dia
                 boolean is = true;
+                boolean leftOneOut = false;
                 for (int x = 0; x < 3; x++) {
                     if (Istate[x][x] != player)
-                        is = false;
+                    {
+                        if(!leftOneOut && Istate[x][x] == 0)
+                            leftOneOut = true;
+                        else
+                            is = false;
+                    }
                 }
                 if (is) {
                     over[i] = player;
-                    return;
+                    break;
                 }
                 is = true;
+                leftOneOut = false;
                 for (int x = 0; x < 3; x++) {
-                    if (Istate[2 - x][x] != player)
-                        is = false;
+                    if (Istate[2-x][x] != player)
+                    {
+                        if(!leftOneOut && Istate[2-x][x] == 0)
+                            leftOneOut = true;
+                        else
+                            is = false;
+                    }
                 }
                 if (is) {
-                    over[i] = player;
-                    return;
+                    over[i] = (byte)(player * (leftOneOut ? 2 : 1));
+                    break;
                 }
             }
             //draw
@@ -108,7 +143,7 @@ class State
                         full = false;
                 }
             if (full) {
-                over[i] = 2;
+                over[i] = 45;
             }
         }
 
@@ -119,6 +154,10 @@ class State
             else if(b == -1)
                 wins[1]++;
             else if(b == 2)
+                nearwins[0]++;
+            else if(b == -2)
+                nearwins[1]++;
+            else if(b == 45)
                 draws++;
         }
     }
@@ -131,6 +170,8 @@ class State
 
 
         return 40*wins[0]
+                + 20*nearwins[0]
+                - 20*nearwins[1]
                 - 40*wins[1]
                 - 5*draws;
 

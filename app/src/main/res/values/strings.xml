@@ -5,6 +5,6 @@
     <string name="player1">O</string>
     <string name="aiOff">ai off</string>
     <string name="aiOn">ai on</string>
-
+    <string name="back">Zurück</string>
 
 </resources>

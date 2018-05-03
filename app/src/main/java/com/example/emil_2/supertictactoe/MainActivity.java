@@ -10,7 +10,10 @@ import android.widget.Button;
 import android.widget.GridLayout;
 import android.widget.TextView;
 
+import java.util.ArrayDeque;
 import java.util.Arrays;
+import java.util.Queue;
+import java.util.Stack;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -104,20 +107,24 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    byte nextMove = -1;
+    ArrayDeque<State> prevStates = new ArrayDeque<>();
+    int maxQueueSize = Integer.MAX_VALUE;
+    State curState;
+
+
     byte[] over = {0, 0, 0,
             0, 0, 0,
             0, 0, 0};
 
-    byte[][] state = new byte[9][9];
+
     boolean[][] isclickable = new boolean[9][9];
 
     ConstraintLayout cl;
 
     byte wonByPlayer = 0;
     byte playerTurn = 1;
-    Button aiButton;
-    boolean aiOn = false;
+    Button backButton;
+
 
     TextView tv;
 
@@ -126,11 +133,12 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         getButtons();
-        aiButton = findViewById(R.id.aiButton);
+        backButton = findViewById(R.id.backButton);
         tv = findViewById(R.id.playerDisplay);
         tv.setText(playerTurn == 1 ? R.string.player0 : R.string.player1);
         tv.setTextColor(getResources().getColor(
                 playerTurn == 1 ? R.color.Player0 : R.color.Player1));
+        byte[][] state = new byte[9][9];
         for(int y = 0; y < 9; y++)
             for(int x = 0; x < 9; x++)
             {
@@ -145,44 +153,63 @@ public class MainActivity extends AppCompatActivity {
                 }});
             }
 
+        curState = new State(state, (byte)-1);
+
         for(int i = 0; i < 9; i++)
             setBoardColor(i , R.color.Highlight);
         cl = findViewById(R.id.backgrond);
         cl.setBackgroundResource(R.color.DarkBackground);
     }
 
-    public void aiButton(View v)
+    public void backButton(View v)
     {
-        aiOn = !aiOn;
-        aiButton.setText(aiOn ? R.string.aiOn : R.string.aiOff);
+        if(!prevStates.isEmpty()) {
+            curState = prevStates.removeLast();
+            playerTurn *= -1;
+        }
+
+        render();
     }
 
-    void buttonclicked(int y, int x, boolean runByAi)
+    void render()
     {
-        if(!isclickable[y][x])
-            return;
-        int gridId = 3 * (y / 3) + (x / 3);
-        state[y][x] = playerTurn;
-        if(playerTurn == 1)
-            buttons[y][x].setText(R.string.player0);
-        else
-            buttons[y][x].setText(R.string.player1);
+        for (int y = 0; y < 9; y++) {
+            for (int x = 0; x < 9; x++) {
+                switch (curState.state[y][x]) {
+                case 1:
+                    buttons[y][x].setText(R.string.player0);
+                    break;
+                case -1:
+                    buttons[y][x].setText(R.string.player1);
+                    break;
+                case 0:
+                    buttons[y][x].setText(R.string.empty);
+                    break;
+                }
+            }
+        }
 
-        checkIfOver(gridId);
-        nextMove = (byte)(3 * (y % 3) + (x % 3));
-
+        //highlight
         //reset highlighting
         for(int i = 0; i < 9; i++) {
             setBoardColor(i, R.color.Transparent);
             setBoardClickable(i, false);
         }
 
+
+        Arrays.fill(over, (byte)0);
+        //highlight already won board
+        for (int i = 0; i < 9; i++) {
+            checkIfOver(i);
+        }
+
+
         //check if board at next pos is finished
-        if(over[nextMove] == 0)
+        if(curState.nextMove != -1 && over[curState.nextMove] == 0)
         {
-            setBoardColor(nextMove , R.color.Highlight);
-            setBoardClickable(nextMove, true);
-            stateCheck(nextMove);
+            setBoardColor(curState.nextMove, R.color.Highlight);
+            setBoardClickable(curState.nextMove, true);
+            stateCheck(curState.nextMove);
 
         }
         else
@@ -195,14 +222,7 @@ public class MainActivity extends AppCompatActivity {
                 stateCheck(i);
             }
         }
-        if(debug)
-            for(int i = 0; i < 9; i++)
-            {
-                setBoardClickable(i, true);
-                stateCheck(i);
-            }
 
-        //highlight already won boards
         for(int i = 0; i < 9; i++)
         {
             if (over[i] == 1)
@@ -221,10 +241,42 @@ public class MainActivity extends AppCompatActivity {
                 setBoardClickable(i, false);
             }
         }
-        playerTurn *= -1;
+
         tv.setText(playerTurn == 1 ? R.string.player0 : R.string.player1);
         tv.setTextColor(getResources().getColor(
                 playerTurn == 1 ? R.color.Player0 : R.color.Player1));
+
+
+    }
+
+    void buttonclicked(int y, int x, boolean runByAi)
+    {
+
+        if(!isclickable[y][x])
+            return;
+
+        prevStates.add(new State(curState));
+        if(prevStates.size() > maxQueueSize)
+            prevStates.removeFirst();
+
+
+        curState.state[y][x] = playerTurn;
+
+
+
+        curState.nextMove = (byte)(3 * (y % 3) + (x % 3));
+        playerTurn *= -1;
+        render();
+
+        if(debug)
+            for(int i = 0; i < 9; i++)
+            {
+                setBoardClickable(i, true);
+                stateCheck(i);
+            }
+
+
+
        /* String s = "";
         for(y = 0; y < 9; y++) {
             for (x = 0; x < 9; x++)
@@ -251,21 +303,10 @@ public class MainActivity extends AppCompatActivity {
             if(wonByPlayer == 2)
                 cl.setBackgroundResource(R.color.Draw);
 
-            return;
-        }
-
-        if(aiOn && !runByAi)
-        {
-            Pos p = AI.nextMove(state, nextMove, playerTurn);
-            if(p.x == -1)
-            {
-                System.out.println("AI didn't find a move!");
-                return;
-            }
-            System.out.println("AI played x=" + p.x + ", y=" + p.y + "\nnextmove:" + nextMove);
-            buttonclicked(p.y, p.x, true);
 
         }
+
+
     }
 
     void setBoardColor(int i, int color)
@@ -297,7 +338,7 @@ public class MainActivity extends AppCompatActivity {
         for(int y = 3 * (i / 3); y < 3 * (i / 3) + 3; y++)
             for(int x = 3 * (i % 3); x < 3 * (i % 3) + 3; x++)
             {
-                Istate[index /3][index % 3] = state[y][x];
+                Istate[index /3][index % 3] = curState.state[y][x];
                 index++;
             }
 
@@ -381,13 +422,34 @@ public class MainActivity extends AppCompatActivity {
     }
     void reset()
     {
-        nextMove = -1;
+        //check if state is only zero if so don't reset
+        boolean notZero = false;
+        for (int y = 0; y < 9; y++) {
+            for (int x = 0; x < 9; x++) {
+                if (curState.state[y][x] != 0)
+                {
+                    notZero = true;
+                    break;
+                }
+            }
+            if(notZero)
+                break;
+        }
+        if(!notZero)
+            return;
+
+
+
+        prevStates.add(new State(curState));
+        if(prevStates.size() > maxQueueSize)
+            prevStates.removeFirst();
+        curState.nextMove = -1;
         playerTurn = 1;
         Arrays.fill(over, (byte)0);
         tv.setText(playerTurn == 1 ? R.string.player0 : R.string.player1);
         tv.setTextColor(getResources().getColor(
                 playerTurn == 1 ? R.color.Player0 : R.color.Player1));
-        for(byte[] i : state)
+        for(byte[] i : curState.state)
             Arrays.fill(i, (byte)0);
         for(boolean[] i : isclickable)
             Arrays.fill(i, true);
@@ -408,7 +470,7 @@ public class MainActivity extends AppCompatActivity {
         for(int y = 3 * (i / 3); y < 3 * (i / 3) + 3; y++)
             for(int x = 3 * (i % 3); x < 3 * (i % 3) + 3; x++)
             {
-                if(state[y][x] != 0)
+                if(curState.state[y][x] != 0)
                 {
                     isclickable[y][x] = false;
 
